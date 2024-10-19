@@ -8,7 +8,7 @@
   
 # nonebot-plugin-partner-join
 
-_✨ NoneBot2 插件 是用于生成舞萌DX(maimaiDX)旅行伙伴加入图片(旋转gif) 也可用于类似嵌入相应圆形框架图片生成(如将图片嵌入校徽)✨_
+_✨ NoneBot2 插件 用于生成舞萌DX(maimaiDX)旅行伙伴加入图片(旋转gif) 也可用于类似嵌入相应圆形框架图片生成(如将图片嵌入校徽)✨_
 
 <a href="./LICENSE">
 </a>
@@ -17,7 +17,7 @@ _✨ NoneBot2 插件 是用于生成舞萌DX(maimaiDX)旅行伙伴加入图片(�
 
 ## 📖 介绍
 
-nonebot-plugin-partner-join 用于生成舞萌DX(maimaiDX)旅行伙伴加入图片(旋转gif)的插件 也可用于类似嵌入相应圆形框架图片生成(如将图片嵌入校徽)
+nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入图片(旋转gif)的插件 也可用于类似嵌入相应圆形框架图片生成(如将图片嵌入校徽)
 ### 实现原理
 
 将用户发送的图片裁剪成圆形后嵌入背景gif的透明圆形区域
