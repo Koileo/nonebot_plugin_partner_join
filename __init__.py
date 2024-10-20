@@ -6,21 +6,30 @@ import datetime
 from PIL import Image, ImageDraw, ImageSequence
 import imageio
 import httpx
-from nonebot import on_command
+from nonebot.plugin import PluginMetadata
+from nonebot import on_command, get_driver
+from nonebot.adapters import Bot, Event, Message
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, Bot, Event
 from nonebot.params import Arg, CommandArg
 from nonebot.typing import T_State
-from nonebot_plugin_alconna import Match, on_alconna
-from typing import Optional
-
-from tarina import LRU
-
-from nonebot_plugin_alconna.uniseg import reply_fetch
-from nonebot_plugin_alconna import Reply, Extension, UniMessage
+from nonebot import require
+require("nonebot_plugin_alconna")
+from nonebot_plugin_alconna.uniseg.tools import reply_fetch
+require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
-from nonebot import get_driver
-from .config import Config
+from tarina import LRU
 from dotenv import load_dotenv
+from typing import Optional
+from .config import Config
+
+__plugin_meta__ = PluginMetadata(
+    name="nonebot_plugin_partner_join",
+    description="NoneBot2 插件 用于生成舞萌DX(maimaiDX)旅行伙伴加入图片(旋转gif) 也可用于类似嵌入相应圆形框架图片生成(如将图片嵌入校徽)",
+    usage="",
+    type="application",
+    homepage="https://github.com/YuuzukiRin/nonebot_plugin_partner_join",
+    config=Config,
+)
 
 join_DIR = os.path.join(os.getcwd(), 'data', 'join')
 
@@ -391,3 +400,4 @@ def composite_images(background_path: str, gif_path: str) -> str:
     )
     
     return final_gif_path
+    
