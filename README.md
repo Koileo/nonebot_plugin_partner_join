@@ -44,7 +44,7 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 </details>
 
 <details>
-<summary>使用 nb-cli 安装</summary> (暂不可用)
+<summary>使用 nb-cli 安装</summary> 
 在 nonebot2 项目的根目录下打开命令行, 输入以下指令即可安装
 
     nb plugin install nonebot-plugin-partner-join
