@@ -12,7 +12,7 @@ _✨ NoneBot2 插件 用于生成舞萌DX(maimaiDX)旅行伙伴加入图片(旋�
 
 <a href="./LICENSE">
 </a>
-<img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="python">
+<img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="python">
 </div>
 
 ## 📖 介绍
@@ -35,13 +35,15 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 如果需要增加自定义的背景图，请保证图片满足以下要求，将背景图放入background文件夹中，并在.env文件中按要求添加BACKGROUND_PARAMS配置
 - 背景图片格式为.gif(可以直接通过修改文件名修改.png文件后缀为.gif)
 - 背景图需要有圆形透明区域，需保证透明圆形区域圆心位于图片中轴线(纵向)
-- 生成图片需要相应python插件，如果出现报错请根据报错提示使用pip安装所需插件
 
 ## 💿 安装
-
-下载文件，将nonebot_plugin_partner_join文件夹放入您的nonebot2插件目录内
-
 <details open>
+<summary>使用包管理器安装</summary>
+下载文件，将nonebot_plugin_partner_join文件夹放入您的nonebot2插件目录内(通常在 : 您的插件根目录\src\plugin)
+
+</details>
+
+<details>
 <summary>使用 nb-cli 安装</summary> (暂不可用)
 在 nonebot2 项目的根目录下打开命令行, 输入以下指令即可安装
 
@@ -49,12 +51,12 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 
 </details>
 
-<details>
-<summary>使用包管理器安装</summary> (暂不可用)
+<details open>
+<summary>使用包管理器安装</summary> 
 在 nonebot2 项目的插件目录下, 打开命令行, 根据你使用的包管理器, 输入相应的安装命令
 
-<details>
-<summary>pip</summary> (暂不可用)
+<details open>
+<summary>pip</summary> 
 
     pip install nonebot-plugin-partner-join
 
