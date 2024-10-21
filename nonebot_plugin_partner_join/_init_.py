@@ -4,23 +4,25 @@ import io
 import re
 import datetime
 from PIL import Image, ImageDraw, ImageSequence
-import imageio
 import httpx
 from nonebot.plugin import PluginMetadata
-from nonebot import on_command, get_driver
+from nonebot import require, on_command, get_driver
 from nonebot.adapters import Bot, Event, Message
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, Bot, Event
 from nonebot.params import Arg, CommandArg
 from nonebot.typing import T_State
-from nonebot import require
 require("nonebot_plugin_alconna")
 from nonebot_plugin_alconna.uniseg.tools import reply_fetch
 require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
+require("nonebot_plugin_localstore")
+import nonebot_plugin_localstore as store
 from tarina import LRU
-from dotenv import load_dotenv
 from typing import Optional
+import nonebot
+from nonebot import get_plugin_config
 from .config import Config
+plugin_config = get_plugin_config(Config)
 
 __plugin_meta__ = PluginMetadata(
     name="nonebot_plugin_partner_join",
@@ -31,7 +33,8 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters={"~onebot.v11"},
 )
 
-join_DIR = os.path.join(os.getcwd(), 'data', 'join')
+join_DIR = store.get_data_dir("nonebot_plugin_partner_join")
+join_cache_DIR = store.get_cache_dir("nonebot_plugin_partner_join")
 
 @scheduler.scheduled_job('cron', hour=0, minute=0)
 async def clear_join_daily():
@@ -80,10 +83,16 @@ class ReplyMergeExtension:
 
 reply_merge = ReplyMergeExtension(add_left=True, sep="\n")
 
-driver = get_driver()
-PARAMS = driver.config.params
-BACKGROUND_PARAMS = driver.config.background_params
-JOIN_COMMANDS = driver.config.commands
+config = nonebot.get_driver().config
+
+PARAMS = getattr(config, 'params', plugin_config.params)
+BACKGROUND_PARAMS = getattr(config, 'background_params', plugin_config.background_params)
+JOIN_COMMANDS = getattr(config, 'join_commands', plugin_config.join_commands)
+
+fps = getattr(config, 'gif_fps', plugin_config.gif_fps)
+total_duration = getattr(config, 'total_duration', plugin_config.total_duration)
+max_turns = getattr(config, 'max_turns', plugin_config.max_turns)
+rotation_direction = getattr(config, 'rotation_direction', plugin_config.rotation_direction)
 
 for main_command, aliases in JOIN_COMMANDS.items():
     join = on_command(main_command, aliases=set(aliases), priority=5, block=True)
@@ -199,8 +208,8 @@ async def handle_image(bot: Bot, event: Event, state: T_State, image: Message = 
     # 剪切成圆形
     if state.get("skip_gif", False):
         # 创建一个虚拟的GIF路径，保存经过圆形剪裁的GIF
-        gif_path = os.path.join("data/join_cache", "placeholder.gif")
-        os.makedirs("data/join_cache", exist_ok=True)      
+        gif_path = os.path.join(join_cache_DIR, "placeholder.gif")
+        os.makedirs(join_cache_DIR, exist_ok=True)      
         # 如果GIF是动画的，保存动态GIF
         if getattr(img, "is_animated", False):
             frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
@@ -237,8 +246,8 @@ def circle_crop(img: Image.Image) -> Image.Image:
         output = frames[0]
         output.info = img.info
 
-        gif_path = os.path.join("data/join", f"cropped_{int(time.time())}.gif")
-        os.makedirs("data/join", exist_ok=True)
+        gif_path = os.path.join(join_DIR, f"cropped_{int(time.time())}.gif")
+        os.makedirs(join_DIR, exist_ok=True)
         output.save(gif_path, save_all=True, append_images=frames[1:], loop=0, duration=img.info.get("duration", 100))
         
         return Image.open(gif_path)
@@ -257,13 +266,6 @@ def crop_single_frame(frame: Image.Image) -> Image.Image:
     output.paste(frame, (0, 0), mask)
     output = output.crop((center_x - radius, center_y - radius, center_x + radius, center_y + radius))
     return output
-
-load_dotenv(dotenv_path='.env.prod')
-
-fps = int(os.getenv("GIF_FPS", 30))
-total_duration = int(os.getenv("GIF_TOTAL_DURATION", 2))
-max_turns = int(os.getenv("GIF_MAX_TURNS", 4))
-rotation_direction = int(os.getenv("GIF_ROTATION_DIRECTION", -1))
 
 def create_rotating_gif(img: Image.Image) -> str:
     """创建旋转GIF，保留动态效果"""
@@ -314,7 +316,7 @@ def create_rotating_gif(img: Image.Image) -> str:
         frame = scaled_frames[i].rotate(rotation_direction * angle, resample=Image.BICUBIC)
         frames.append(frame)
 
-    output_dir = "data/join"
+    output_dir = join_DIR
     os.makedirs(output_dir, exist_ok=True)
     
     gif_path = os.path.join(output_dir, f"rotating_{int(time.time())}.gif")
@@ -389,7 +391,7 @@ def composite_images(background_path: str, gif_path: str) -> str:
         composite_frame.paste(frame, (circle_center_x - diameter // 2, circle_center_y - diameter // 2), frame.split()[-1])
         composite_frames.append(composite_frame)
 
-    final_gif_path = os.path.join("data", "join", f"composite_{int(time.time())}.gif")
+    final_gif_path = os.path.join(join_DIR, f"composite_{int(time.time())}.gif")
     
     composite_frames[0].save(
         final_gif_path,
@@ -400,4 +402,4 @@ def composite_images(background_path: str, gif_path: str) -> str:
     )
     
     return final_gif_path
-  
+    
