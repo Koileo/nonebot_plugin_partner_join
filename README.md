@@ -78,9 +78,9 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 | PARAMS | 否 | {"skip_gif": ["-s", "s", "stop"],"self_join": ["自己", "我"]} | 跳过生成旋转gif的参数及加入自己(头像图片)的指令 |
 | BACKGROUND_PARAMS | 否 | {"background.gif": ["default"], "your_background_name.gif": ["指令1", "指令2"]} | 自定义将图片加入其他背景框的参数指令 |
 | GIF_FPS | 否 | 30 | gif的fps |
-| GIF_TOTAL_DURATION | 否 | 2 | gif的播放时间 |
-| GIF_MAX_TURNS | 否 | 4 | gif的旋转圈数 |
-| GIF_ROTATION_DIRECTION | 否 | -1 | gif的旋转方向(1 表示顺时针, -1 表示逆时针) |
+| TOTAL_DURATION | 否 | 2 | gif的播放时间 |
+| MAX_TURNS | 否 | 4 | gif的旋转圈数 |
+| ROTATION_DIRECTION | 否 | -1 | gif的旋转方向(1 表示顺时针, -1 表示逆时针) |
 
 ## 🎉 使用
 ### 指令表
