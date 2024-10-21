@@ -91,4 +91,5 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 | 加入+设置的加入其他背景框的指令 | 群员 | 否 | 群聊 | 换成你选择的背景框 如:加入XX |
 
 ### 效果图
-(待传)
+<details>
+<summary>展开</summary> 
