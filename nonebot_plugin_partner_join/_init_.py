@@ -103,7 +103,13 @@ async def handle_first_receive(bot: Bot, event: Event, state: T_State, args: Mes
     
     for key in PARAMS.keys():
         state[key] = False
-    
+        
+    for key, aliases in PARAMS.items():
+        for alias in aliases:
+            if full_message.endswith(alias):
+                state[key] = True
+                break
+                
     for key, aliases in SELF_PARAMS.items():
         found_match = False 
         for alias in aliases:
