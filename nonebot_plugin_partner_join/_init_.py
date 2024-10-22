@@ -104,11 +104,13 @@ async def handle_first_receive(bot: Bot, event: Event, state: T_State, args: Mes
     for key in PARAMS.keys():
         state[key] = False
     
-    for key, aliases in PARAMS.items():
+    for key, aliases in SELF_PARAMS.items():
+        found_match = False
         for alias in aliases:
-            if full_message.endswith(alias):
+            if alias in full_message:
                 state[key] = True
-                break
+                found_match = True
+                break  
             
     selected_background = "background.gif"
     for bg_file, aliases in BACKGROUND_PARAMS.items():
