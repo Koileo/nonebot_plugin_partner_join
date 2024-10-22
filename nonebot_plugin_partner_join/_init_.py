@@ -3,13 +3,14 @@ import time
 import io
 import re
 import datetime
-from PIL import Image, ImageDraw, ImageSequence
 import httpx
+from PIL import Image, ImageDraw, ImageSequence
+from pathlib import Path
 from nonebot.plugin import PluginMetadata
 from nonebot import require, on_command, get_driver
 from nonebot.adapters import Bot, Event, Message
-from nonebot.adapters.onebot.v11 import Message, MessageSegment, Bot, Event
-from nonebot.params import Arg, CommandArg
+from nonebot.adapters.onebot.v11 import Message, MessageSegment, Bot, Event, GroupMessageEvent
+from nonebot.params import Arg, CommandArg, EventMessage
 from nonebot.typing import T_State
 require("nonebot_plugin_alconna")
 from nonebot_plugin_alconna.uniseg.tools import reply_fetch
@@ -32,6 +33,24 @@ __plugin_meta__ = PluginMetadata(
     homepage="https://github.com/YuuzukiRin/nonebot_plugin_partner_join",
     supported_adapters={"~onebot.v11"},
 )
+
+join_help = on_command("加入帮助", aliases={"join帮助", "加入help", "join help"}, priority=10, block=True)
+
+@join_help.handle()
+async def _(event: GroupMessageEvent, message: Message = EventMessage()):
+    await join_help.send(
+        "加入指令:\n"
+        "[加入/join/旅行伙伴加入] 生成“旅行伙伴加入”旋转gif\n"
+        "[加入+设置的加入其他背景框的指令] 换成你选择的背景框 如:加入XX\n"
+        "指令参数:\n"
+        "[<加入指令> -s/s/stop] 生成静态图片\n"
+        "[<加入指令>我/me/自己] 加入自己(头像图片)\n"
+        "指令使用:\n"
+        "[<加入指令>image] 加入指令与图片一起发送\n"
+        "[<加入指令>,image] 先发送加入指令再选择图片发送\n"
+        "[<加入指令>“image”] 加入你引用的聊天记录(图片)\n"
+        "[<加入指令>@XX] 加入@对象(头像图片)\n"
+    ) 
 
 join_DIR: Path = store.get_plugin_data_dir()
 join_cache_DIR: Path = store.get_plugin_cache_dir()
@@ -84,8 +103,9 @@ class ReplyMergeExtension:
 reply_merge = ReplyMergeExtension(add_left=True, sep="\n")
 
 config = nonebot.get_driver().config
-
+#读取环境变量，若未配置则从config获取
 PARAMS = getattr(config, 'params', plugin_config.params)
+SELF_PARAMS = getattr(config, 'self_params', plugin_config.self_params)
 BACKGROUND_PARAMS = getattr(config, 'background_params', plugin_config.background_params)
 JOIN_COMMANDS = getattr(config, 'join_commands', plugin_config.join_commands)
 
@@ -103,12 +123,18 @@ async def handle_first_receive(bot: Bot, event: Event, state: T_State, args: Mes
     
     for key in PARAMS.keys():
         state[key] = False
-        
+    
     for key, aliases in PARAMS.items():
         for alias in aliases:
-            if full_message.endswith(alias):
-                state[key] = True
-                break
+            if '[' in full_message and ']' in full_message:
+                outside_brackets = full_message.split('[')[0] + full_message.split(']')[-1]
+                if alias in outside_brackets:
+                    state[key] = True
+                    break
+            else:
+                if full_message.endswith(alias):
+                    state[key] = True
+                    break   
                 
     for key, aliases in SELF_PARAMS.items():
         found_match = False 
@@ -116,7 +142,7 @@ async def handle_first_receive(bot: Bot, event: Event, state: T_State, args: Mes
             if alias in full_message and not full_message.lower().count("image"):
                 state[key] = True
                 found_match = True
-                break   
+                break            
             
     selected_background = "background.gif"
     for bg_file, aliases in BACKGROUND_PARAMS.items():
