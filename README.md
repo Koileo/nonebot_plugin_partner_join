@@ -84,6 +84,7 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 | ROTATION_DIRECTION | 否 | -1 | gif的旋转方向(1 表示顺时针, -1 表示逆时针) |
 
 ## 🎉 使用
+使用 `加入帮助/join help` 指令获取指令表
 ### 指令表
 | 加入指令 | 范围 | 说明 |
 |:-----:|:----:|:----:|
