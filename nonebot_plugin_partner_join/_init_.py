@@ -33,8 +33,8 @@ __plugin_meta__ = PluginMetadata(
     supported_adapters={"~onebot.v11"},
 )
 
-join_DIR: Path = store.get_data_dir("nonebot_plugin_partner_join")
-join_cache_DIR: Path = store.get_cache_dir("nonebot_plugin_partner_join")
+join_DIR: Path = store.get_plugin_data_dir()
+join_cache_DIR: Path = store.get_plugin_cache_dir()
 
 @scheduler.scheduled_job('cron', hour=0, minute=0)
 async def clear_join_daily():
