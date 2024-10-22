@@ -110,3 +110,9 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 ### 效果图
 <details>
 <summary>展开</summary> 
+
+![image](https://github.com/YuuzukiRin/nonebot_plugin_partner_join/blob/main/docs/JOIN_COMMANDS_WITH.png)
+![image](https://github.com/YuuzukiRin/nonebot_plugin_partner_join/blob/main/docs/JOIN_COMMANDS_SUBSTEP.png)
+![image](https://github.com/YuuzukiRin/nonebot_plugin_partner_join/blob/main/docs/JOIN_COMMANDS_QUOTE.png)
+![image](https://github.com/YuuzukiRin/nonebot_plugin_partner_join/blob/main/docs/JOIN_COMMANDS_AT.png)
+![image](https://github.com/YuuzukiRin/nonebot_plugin_partner_join/blob/main/docs/JOIN_COMMANDS_ME.png)
