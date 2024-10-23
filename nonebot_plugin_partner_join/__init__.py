@@ -104,7 +104,7 @@ config = nonebot.get_driver().config
 PARAMS = config.params
 SELF_PARAMS = config.self_params
 BACKGROUND_PARAMS = config.background_params
-JOIN_COMMANDS = getattr(config, 'join_commands', plugin_config.join_commands
+JOIN_COMMANDS = config.join_commands
 
 fps = config.gif_fps
 total_duration = plugin_config.total_duration
