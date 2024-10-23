@@ -152,11 +152,12 @@ async def handle_first_receive(bot: Bot, event: Event, state: T_State, args: Mes
     message_str = str(full_message)
     
     user_id = event.get_user_id()
+    #暂时使用正则检索str中的url
+    at_pattern = re.compile(r'\[CQ:at,qq=(\d+)\]')
+    at_segments = at_pattern.findall(full_message)
     at_id = None
-    at_segments = re.findall(r'@(\S+)', full_message)
     if at_segments:
         at_id = at_segments[0]
-    #若引用图片回复，获取str内容并解析为url
     image_pattern = re.compile(r'\[CQ:image,[^\]]*\]')
     image_segments = image_pattern.findall(message_str)
     
@@ -184,11 +185,9 @@ async def handle_image(bot: Bot, event: Event, state: T_State, image: Message = 
     if state.get("image_processed", False):
         full_message = await reply_merge.message_provider(event, state, bot)
         message_str = str(full_message)
-        at_id = None
-        at_segments = re.findall(r'@(\S+)', full_message)
-        if at_segments:
-            at_id = at_segments[0]
-        at_segments = re.findall(r'@(\S+)', full_message)
+        user_id = event.get_user_id()
+        at_pattern = re.compile(r'\[CQ:at,qq=(\d+)\]')
+        at_segments = at_pattern.findall(full_message)
     
         if at_segments:
             at_id = at_segments[0]
