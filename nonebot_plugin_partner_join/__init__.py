@@ -21,9 +21,6 @@ import nonebot_plugin_localstore as store
 from tarina import LRU
 from typing import Optional
 import nonebot
-from nonebot import get_plugin_config
-from .config import Config
-plugin_config = get_plugin_config(Config)
 
 __plugin_meta__ = PluginMetadata(
     name="nonebot_plugin_partner_join",
@@ -103,16 +100,16 @@ class ReplyMergeExtension:
 reply_merge = ReplyMergeExtension(add_left=True, sep="\n")
 
 config = nonebot.get_driver().config
-#读取环境变量，若未配置则从config获取
-PARAMS = getattr(config, 'params', plugin_config.params)
-SELF_PARAMS = getattr(config, 'self_params', plugin_config.self_params)
-BACKGROUND_PARAMS = getattr(config, 'background_params', plugin_config.background_params)
-JOIN_COMMANDS = getattr(config, 'join_commands', plugin_config.join_commands)
+#读取环境变量
+PARAMS = config.params
+SELF_PARAMS = config.self_params
+BACKGROUND_PARAMS = config.background_params
+JOIN_COMMANDS = getattr(config, 'join_commands', plugin_config.join_commands
 
-fps = getattr(config, 'gif_fps', plugin_config.gif_fps)
-total_duration = getattr(config, 'total_duration', plugin_config.total_duration)
-max_turns = getattr(config, 'max_turns', plugin_config.max_turns)
-rotation_direction = getattr(config, 'rotation_direction', plugin_config.rotation_direction)
+fps = config.gif_fps
+total_duration = plugin_config.total_duration
+max_turns = plugin_config.max_turns
+rotation_direction = plugin_config.rotation_direction
 
 for main_command, aliases in JOIN_COMMANDS.items():
     join = on_command(main_command, aliases=set(aliases), priority=5, block=True)
