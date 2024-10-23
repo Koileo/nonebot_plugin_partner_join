@@ -129,9 +129,8 @@ async def _(
     
     if msg.has(Reply):
         if (reply := await reply_fetch(event, bot)) and reply.msg:
-            reply_msg = reply.msg
-            
-            uni_msg_with_reply = UniMessage.generate_without_reply(message=reply_msg)  # type: ignore
+            reply_msg = reply.msg            
+            uni_msg_with_reply = UniMessage.generate_without_reply(message=reply_msg)
         msg.extend(uni_msg_with_reply)  
     
     if img_url := await extract_images(bot=bot, event=event, state=state, msg=msg):
