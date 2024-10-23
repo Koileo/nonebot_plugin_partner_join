@@ -13,7 +13,9 @@ from nonebot.adapters.onebot.v11 import Message, MessageSegment, Bot, Event, Gro
 from nonebot.params import Arg, CommandArg, EventMessage
 from nonebot.typing import T_State
 require("nonebot_plugin_alconna")
-from nonebot_plugin_alconna.uniseg.tools import reply_fetch
+from nonebot_plugin_alconna import Image as ALImage, UniMessage
+from nonebot_plugin_alconna.uniseg.tools import image_fetch, reply_fetch
+from nonebot_plugin_alconna.uniseg import UniMsg, Reply
 require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
 require("nonebot_plugin_localstore")
@@ -21,6 +23,9 @@ import nonebot_plugin_localstore as store
 from tarina import LRU
 from typing import Optional
 import nonebot
+from nonebot.matcher import Matcher
+from typing import List
+from .utils import utils
 
 __plugin_meta__ = PluginMetadata(
     name="nonebot_plugin_partner_join",
@@ -67,175 +72,116 @@ async def clear_join_daily():
             except Exception:
                 pass
                 
-class ReplyMergeExtension:
-    def __init__(self, add_left: bool = False, sep: str = " "):
-        self.add_left = add_left
-        self.sep = sep
-
-    async def message_provider(self, event, state, bot, use_origin: bool = True):
-        if event.get_type() != "message":
-            return
-        try:
-            msg = event.get_message()
-        except (NotImplementedError, ValueError):
-            return
-
-        original_message = msg.get_plain_text() if hasattr(msg, 'get_plain_text') else str(msg)
-        
-        if not (reply := await reply_fetch(event, bot)):
-            return original_message
-        if not reply.msg:
-            return original_message
-        
-        reply_msg = reply.msg
-        reply_message = reply_msg if not isinstance(reply_msg, str) else str(reply_msg)
-        
-        if self.add_left:
-            combined_message = f"{reply_message}{self.sep}{original_message}"
-        else:
-            combined_message = f"{original_message}{self.sep}{reply_message}"
-        
-        return combined_message
-
-reply_merge = ReplyMergeExtension(add_left=True, sep="\n")
-
 config = nonebot.get_driver().config
-#读取环境变量
+
 PARAMS = config.params
 SELF_PARAMS = config.self_params
 BACKGROUND_PARAMS = config.background_params
 JOIN_COMMANDS = config.join_commands
 
-fps = config.gif_fps
-total_duration = plugin_config.total_duration
-max_turns = plugin_config.max_turns
-rotation_direction = plugin_config.rotation_direction
+fps = utils.gif_fps
+total_duration = utils.total_duration
+max_turns = utils.max_turns
+rotation_direction = utils.rotation_direction
+
+async def extract_images(  
+    bot: Bot, event: Event, state: T_State, msg: UniMsg
+) -> str:  
+    for msg_seg in msg:  
+        if isinstance(msg_seg, ALImage): 
+
+            return await image_fetch(bot=bot, event=event, state=state, img=msg_seg)
 
 for main_command, aliases in JOIN_COMMANDS.items():
     join = on_command(main_command, aliases=set(aliases), priority=5, block=True)
-
-@join.handle()
-async def handle_first_receive(bot: Bot, event: Event, state: T_State, args: Message = CommandArg()):
-    full_message = await reply_merge.message_provider(event, state, bot)
     
+@join.handle()
+async def _(  
+    bot: Bot,
+    msg: UniMsg,
+    event: Event,
+    state: T_State,
+    matcher: Matcher,
+):
+
     for key in PARAMS.keys():
         state[key] = False
-    
+
     for key, aliases in PARAMS.items():
         for alias in aliases:
-            if '[' in full_message and ']' in full_message:
-                outside_brackets = full_message.split('[')[0] + full_message.split(']')[-1]
-                if alias in outside_brackets:
-                    state[key] = True
-                    break
-            else:
-                if full_message.endswith(alias):
-                    state[key] = True
-                    break   
-                
-    for key, aliases in SELF_PARAMS.items():
-        found_match = False 
-        for alias in aliases:
-            if alias in full_message and not full_message.lower().count("image"):
+            if any(alias in str(segment) for segment in msg): 
                 state[key] = True
-                found_match = True
-                break            
-            
+                break
+
+    for key, aliases in SELF_PARAMS.items():
+        for alias in aliases:
+            if alias in str(msg) and not str(msg).lower().count("image"):
+                state[key] = True
+                break
+
     selected_background = "background.gif"
     for bg_file, aliases in BACKGROUND_PARAMS.items():
         for alias in aliases:
-            if alias in full_message:
+            if alias in str(msg):
                 selected_background = bg_file
                 break
-    state["selected_background"] = selected_background       
+    state["selected_background"] = selected_background 
+    
+    if msg.has(Reply):
+        if (reply := await reply_fetch(event, bot)) and reply.msg:
+            reply_msg = reply.msg
             
-    message_str = str(full_message)
+            uni_msg_with_reply = UniMessage.generate_without_reply(message=reply_msg)  # type: ignore
+        msg.extend(uni_msg_with_reply)  
+    
+    if img_url := await extract_images(bot=bot, event=event, state=state, msg=msg):
+        state["img_url"] = img_url  
+        state["image_processed"] = True
     
     user_id = event.get_user_id()
-    #暂时使用正则检索str中的url
-    at_pattern = re.compile(r'\[CQ:at,qq=(\d+)\]')
-    at_segments = at_pattern.findall(full_message)
-    at_id = None
-    if at_segments:
-        at_id = at_segments[0]
-    image_pattern = re.compile(r'\[CQ:image,[^\]]*\]')
-    image_segments = image_pattern.findall(message_str)
+    at_id = await utils.get_at(event)    
     
-    if image_segments:
-        image_info = image_segments[0]
-        state["image"] = image_info
-        await join.send("旅行伙伴加入中...")
+    if at_id != "寄":
+        img_url = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(at_id)
         state["image_processed"] = True
-    elif at_id:
-        state["image"] = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(at_id)
-        await join.send("旅行伙伴加入中...")
-        state["image_processed"] = True
-        state["image_at"] = True
+        state["image_object"] = True
     elif state.get("self_join", False):
-        state["image"] = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(user_id)
-        await join.send("旅行伙伴加入中...")
+        img_url = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(user_id)
         state["image_processed"] = True
-        state["image_user"] = True
-    else:
-        state["awaiting_image"] = True
-        await join.send("请选择要加入的旅行伙伴~(图片)")
+        state["image_object"] = True
 
-@join.got("image")
-async def handle_image(bot: Bot, event: Event, state: T_State, image: Message = Arg("image")):
-    if state.get("image_processed", False):
-        full_message = await reply_merge.message_provider(event, state, bot)
-        message_str = str(full_message)
-        user_id = event.get_user_id()
-        at_pattern = re.compile(r'\[CQ:at,qq=(\d+)\]')
-        at_segments = at_pattern.findall(full_message)
-    
-        if at_segments:
-            at_id = at_segments[0]
-        if state.get("image_at", False):
-            image_info = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(at_id)
-            state["image"] = image_info
-            state["image_at"] = False
-        elif state.get("self_join", False):
-            image_info = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(user_id)
-            state["image"] = image_info
-            state["self_join"] = False
-        else:       
-            image_pattern = re.compile(r'\[CQ:image,[^\]]*\]')
-            image_segments = image_pattern.findall(message_str)
-            image_info = image_segments[0]
-            state["image"] = image_info
-            state["image_processed"] = False
-    else:    
-        image = image.get("image")
-        image_info = str (image)
-        if image_info:
-            if state.get("awaiting_image", False):
-                state["image"] = image_info
-                await join.send("旅行伙伴加入中...")
-                state["awaiting_image"] = False
-            else:
-                if state.get("image_processed", False):
-                    state["image"] = image_info
-                    state["image_processed"] = False
-                else:
-                    await join.finish("加入取消~") 
+    if state.get("image_object", False):
+        url_pattern = re.compile(r'url=([^,]+)')
+        match = url_pattern.search(img_url)
+        if match:
+            image_url = match.group(1)
+            image_url = image_url.replace("&amp;", "&")
         else:
-            await join.finish("加入取消~") 
+            print("未找到图片URL")
 
-    url_pattern = re.compile(r'url=([^,]+)')
-    match = url_pattern.search(image_info)
-    if match:
-        image_url = match.group(1)
-        image_url = image_url.replace("&amp;", "&")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(image_url)
+            img_data = response.content
+            state["img_data"] = img_data
+        
+@join.got("image_processed", prompt="请选择要加入的旅行伙伴~(图片)")
+async def handle_event(
+    bot: Bot,
+    msg: UniMsg,
+    event: Event,
+    state: T_State,
+):
+    if state.get("image_object", False):
+        img_data = state["img_data"]
+        await join.send("旅行伙伴加入中...")
+        img = Image.open(io.BytesIO(img_data))
     else:
-        print("未找到图片URL")
-
-
-    async with httpx.AsyncClient() as client:
-        response = await client.get(image_url)
-        img_data = response.content
-
-    img = Image.open(io.BytesIO(img_data))
+        img_data = await extract_images(bot=bot, event=event, state=state, msg=msg)
+        if img_data:
+            await join.send("旅行伙伴加入中...")
+            img = Image.open(io.BytesIO(img_data))
+        else:
+            await join.finish("加入取消~")
 
     # 剪切成圆形
     if state.get("skip_gif", False):
