@@ -27,7 +27,7 @@ plugin_config = get_plugin_config(Config)
 
 __plugin_meta__ = PluginMetadata(
     name="nonebot_plugin_partner_join",
-    description="Nonebot2插件 用于生成舞萌DX(maimaiDX)旅行伙伴加入图片(旋转gif) 也可用于类似嵌入相应圆形框架图片生成(如将图片嵌入校徽)",
+    description="NoneBot2插件 用于生成舞萌DX(maimaiDX)旅行伙伴加入图片(旋转gif) 也可用于类似嵌入相应圆形框架图片生成(如将图片嵌入校徽)",
     usage="使用<加入帮助/join help>指令获取使用帮助",
     type="application",
     homepage="https://github.com/YuuzukiRin/nonebot_plugin_partner_join",
