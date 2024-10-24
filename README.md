@@ -78,10 +78,10 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 
 | 配置项 | 必填 | 默认值 | 说明 |
 |:-----:|:----:|:----:|:----:|
-| JOIN_COMMANDS | 是 | {"加入": ["join", "旅行伙伴加入"]} | 加入指令，可自定义添加别名 |
-| PARAMS | 是 | {"skip_gif": ["-s", "s", "stop"]} | 跳过生成旋转gif的参数 |
-| SELF_PARAMS | 是 | {"self_join": ["自己", "me", "我"]} | 加入自己(头像图片)的指令 |
-| BACKGROUND_PARAMS | 是 | {"background.gif": ["default"], "your_background_name.gif": ["指令1", "指令2"]} | 自定义将图片加入其他背景框的参数指令 |
+| JOIN_COMMANDS | 否 | {"加入": ["join", "旅行伙伴加入"]} | 加入指令，可自定义添加别名 |
+| PARAMS | 否 | {"skip_gif": ["-s", "s", "stop"]} | 跳过生成旋转gif的参数 |
+| SELF_PARAMS | 否 | {"self_join": ["自己", "me", "我"]} | 加入自己(头像图片)的指令 |
+| BACKGROUND_PARAMS | 否 | {"background.gif": ["default"], "your_background_name.gif": ["指令1", "指令2"]} | 自定义将图片加入其他背景框的参数指令 |
 | GIF_FPS | 否 | 30 | gif的fps |
 | TOTAL_DURATION | 否 | 2 | gif的播放时间 |
 | MAX_TURNS | 否 | 4 | gif的旋转圈数 |
