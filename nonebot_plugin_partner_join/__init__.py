@@ -140,7 +140,7 @@ async def _(
     user_id = event.get_user_id()
     at_id = await utils.get_at(event)    
     
-    if at_id != "寄" and not state["image_processed"]:
+    if at_id != "寄" and not state.get("image_processed", False):
         img_url = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(at_id)
         state["image_processed"] = True
         state["image_object"] = True
