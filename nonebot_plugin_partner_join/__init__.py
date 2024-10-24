@@ -22,10 +22,11 @@ require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as store
 from tarina import LRU
 from typing import Optional
-import nonebot
 from nonebot.matcher import Matcher
 from typing import List
-from .utils import utils
+from nonebot import get_plugin_config
+from .config import Config
+plugin_config = get_plugin_config(Config)
 
 __plugin_meta__ = PluginMetadata(
     name="nonebot_plugin_partner_join",
@@ -33,6 +34,7 @@ __plugin_meta__ = PluginMetadata(
     usage="使用<加入帮助/join help>指令获取使用帮助",
     type="application",
     homepage="https://github.com/YuuzukiRin/nonebot_plugin_partner_join",
+    config=Config,
     supported_adapters={"~onebot.v11"},
 )
 
@@ -72,17 +74,15 @@ async def clear_join_daily():
             except Exception:
                 pass
                 
-config = nonebot.get_driver().config
+PARAMS = plugin_config.params
+SELF_PARAMS = plugin_config.self_params
+BACKGROUND_PARAMS = plugin_config.background_params
+JOIN_COMMANDS = plugin_config.join_commands
 
-PARAMS = config.params
-SELF_PARAMS = config.self_params
-BACKGROUND_PARAMS = config.background_params
-JOIN_COMMANDS = config.join_commands
-
-fps = utils.gif_fps
-total_duration = utils.total_duration
-max_turns = utils.max_turns
-rotation_direction = utils.rotation_direction
+fps = plugin_config.gif_fps
+total_duration = plugin_config.total_duration
+max_turns = plugin_config.max_turns
+rotation_direction = plugin_config.rotation_direction
 
 async def extract_images(  
     bot: Bot, event: Event, state: T_State, msg: UniMsg
@@ -138,7 +138,7 @@ async def _(
         state["image_processed"] = True
     
     user_id = event.get_user_id()
-    at_id = await utils.get_at(event)    
+    at_id = await plugin_config.get_at(event)    
     
     if at_id != "寄" and not state.get("image_processed", False):
         img_url = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(at_id)
@@ -184,10 +184,10 @@ async def handle_event(
 
     # 剪切成圆形
     if state.get("skip_gif", False):
-        # 创建一个虚拟的GIF路径，保存经过圆形剪裁的GIF
+        # 创建GIF路径，保存经过圆形剪裁的GIF
         gif_path = os.path.join(join_cache_DIR, "placeholder.gif")
         os.makedirs(join_cache_DIR, exist_ok=True)      
-        # 如果GIF是动画的，保存动态GIF
+        # 如果GIF为动态的，保存动态GIF
         if getattr(img, "is_animated", False):
             frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
             frames[0].save(gif_path, save_all=True, append_images=frames[1:], loop=0, duration=img.info.get("duration", 100))
@@ -202,9 +202,10 @@ async def handle_event(
 
     background_path = os.path.join(os.path.dirname(__file__), "background", state["selected_background"])
     final_gif_path = composite_images(background_path, gif_path)
-
-    if os.path.exists(final_gif_path):
-        await join.send(MessageSegment.image(f"file:///{os.path.abspath(final_gif_path)}"))
+    final_gif_path_obj = Path(final_gif_path)
+    
+    if final_gif_path_obj.exists():
+        await join.send(MessageSegment.image(f"file:///{final_gif_path_obj.resolve()}"))
     else:
         print("生成的GIF图像文件不存在。")
     
@@ -379,4 +380,3 @@ def composite_images(background_path: str, gif_path: str) -> str:
     )
     
     return final_gif_path
-    
