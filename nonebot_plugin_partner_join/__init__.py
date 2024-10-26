@@ -34,7 +34,6 @@ __plugin_meta__ = PluginMetadata(
     usage="使用<加入帮助/join help>指令获取使用帮助",
     type="application",
     homepage="https://github.com/YuuzukiRin/nonebot_plugin_partner_join",
-    config=Config,
     supported_adapters={"~onebot.v11"},
 )
 
@@ -182,35 +181,35 @@ async def handle_event(
         else:
             await join.finish("加入取消~")
 
-    # 剪切成圆形
+    # 设置GIF路径
+    gif_path = Path(join_cache_DIR) / "placeholder.gif"
+    gif_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # 如果跳过GIF
     if state.get("skip_gif", False):
-        # 创建GIF路径，保存经过圆形剪裁的GIF
-        gif_path = os.path.join(join_cache_DIR, "placeholder.gif")
-        os.makedirs(join_cache_DIR, exist_ok=True)      
-        # 如果GIF为动态的，保存动态GIF
         if getattr(img, "is_animated", False):
             frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
             frames[0].save(gif_path, save_all=True, append_images=frames[1:], loop=0, duration=img.info.get("duration", 100))
         else:
             img = circle_crop(img)
-            img.save(gif_path, format='GIF')
-
+            img.save(gif_path, format="GIF")
         state["skip_gif"] = False
     else:
         img = circle_crop(img)
-        gif_path = create_rotating_gif(img)
+        gif_path = Path(create_rotating_gif(img))
 
-    background_path = os.path.join(os.path.dirname(__file__), "background", state["selected_background"])
-    final_gif_path = composite_images(background_path, gif_path)
-    final_gif_path_obj = Path(final_gif_path)
-    
-    if final_gif_path_obj.exists():
-        await join.send(MessageSegment.image(f"file:///{final_gif_path_obj.resolve()}"))
+    # 合成背景和GIF图像
+    background_path = Path(__file__).parent / "background" / state["selected_background"]
+    final_gif_path = Path(composite_images(background_path, gif_path))
+
+    if final_gif_path.exists():
+        await join.send(MessageSegment.image(f"file:///{final_gif_path.resolve()}"))
     else:
         print("生成的GIF图像文件不存在。")
-    
-    if os.path.exists(gif_path):
-        os.remove(gif_path)
+
+    # 清理缓存的GIF文件
+    if gif_path.exists():
+        gif_path.unlink()
 
 def circle_crop(img: Image.Image) -> Image.Image:
     """将图像裁剪成圆形，保留动态效果"""
@@ -294,13 +293,13 @@ def create_rotating_gif(img: Image.Image) -> str:
         frame = scaled_frames[i].rotate(rotation_direction * angle, resample=Image.BICUBIC)
         frames.append(frame)
 
-    output_dir = join_DIR
-    os.makedirs(output_dir, exist_ok=True)
-    
-    gif_path = os.path.join(output_dir, f"rotating_{int(time.time())}.gif")
+    output_dir = Path(join_DIR)
+    output_dir.mkdir(exist_ok=True)
+    gif_path = output_dir / f"rotating_{int(time.time())}.gif"
+
     frames[0].save(gif_path, save_all=True, append_images=frames[1:], duration=int(1000/fps), loop=0)
     
-    return gif_path
+    return str(gif_path)
 
 def find_circle_diameter(mask: Image.Image) -> int:
     """计算掩码中圆形区域的直径"""
@@ -369,7 +368,7 @@ def composite_images(background_path: str, gif_path: str) -> str:
         composite_frame.paste(frame, (circle_center_x - diameter // 2, circle_center_y - diameter // 2), frame.split()[-1])
         composite_frames.append(composite_frame)
 
-    final_gif_path = os.path.join(join_DIR, f"composite_{int(time.time())}.gif")
+    final_gif_path = Path(join_DIR) / f"composite_{int(time.time())}.gif"
     
     composite_frames[0].save(
         final_gif_path,
@@ -379,4 +378,5 @@ def composite_images(background_path: str, gif_path: str) -> str:
         loop=0
     )
     
-    return final_gif_path
+    return str(final_gif_path)
+    
