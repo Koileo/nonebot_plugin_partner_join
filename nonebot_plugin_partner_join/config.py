@@ -1,18 +1,17 @@
-import nonebot
 from pydantic import BaseModel
 from nonebot.adapters.onebot.v11 import GroupMessageEvent
-config = nonebot.get_driver().config 
+
 class Config(BaseModel):
 
-    gif_fps: int = getattr(config, "GIF_FPS", 30)
-    total_duration: int = getattr(config, "TOTAL_DURATION", 2)
-    max_turns: int = getattr(config, "MAX_TURNS", 4)
-    rotation_direction: int = getattr(config, "ROTATION_DIRECTION", -1)
+    gif_fps: int = 30
+    total_duration: int = 2
+    max_turns: int = 4
+    rotation_direction: int = -1
 
-    params: dict[str, list[str]] = getattr(config, "PARAMS", {"skip_gif": ["-s", "s", "stop"]})
-    self_params: dict[str, list[str]] = getattr(config, "SELF_PARAMS", {"self_join": ["我", "自己"]})
-    background_params: dict[str, list[str]] = getattr(config, "BACKGROUND_PARAMS", {"background.gif": ["default"]})
-    join_commands: dict[str, list[str]] = getattr(config, "JOIN_COMMANDS", {"加入": ["旅行伙伴加入", "旋转"]})
+    params: dict[str, list[str]] = {"skip_gif": ["-s", "s", "stop"]}
+    self_params: dict[str, list[str]] = {"self_join": ["我", "自己"]}
+    background_params: dict[str, list[str]] = {"background.gif": ["default"]}
+    join_commands: dict[str, list[str]] = {"加入": ["旅行伙伴加入", "旋转"]}
         
     @staticmethod
     async def rule(event: GroupMessageEvent) -> bool:
@@ -33,5 +32,4 @@ class Config(BaseModel):
             ),
             "寄",
         )
-
-
+        
