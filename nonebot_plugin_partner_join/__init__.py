@@ -34,6 +34,7 @@ __plugin_meta__ = PluginMetadata(
     usage="使用<加入帮助/join help>指令获取使用帮助",
     type="application",
     homepage="https://github.com/YuuzukiRin/nonebot_plugin_partner_join",
+    config=Config,
     supported_adapters={"~onebot.v11"},
 )
 
@@ -203,7 +204,7 @@ async def handle_event(
     final_gif_path = Path(composite_images(background_path, gif_path))
 
     if final_gif_path.exists():
-        await join.send(MessageSegment.image(f"file:///{final_gif_path.resolve()}"))
+        await join.send(MessageSegment.image(final_gif_path))
     else:
         print("生成的GIF图像文件不存在。")
 
