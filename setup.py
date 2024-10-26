@@ -5,7 +5,7 @@ with open('README.md', encoding="utf-8") as f:
 
 setup(
     name='nonebot-plugin-partner-join',
-    version='0.1.3.9',
+    version='0.1.3.9.1',
     description='NoneBot2 plugin used to generate maimaiDX travel companion add pictures (rotating gif) and can also be used to generate pictures similar to embed the corresponding circular frame (such as embedding the picture into the school badge).',
     long_description=long_description,
     long_description_content_type='text/markdown',
