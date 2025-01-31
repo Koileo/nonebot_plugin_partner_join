@@ -34,6 +34,7 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 - [x]  自定义生成gif的各项参数
 - [x]  自定义图片加入的背景框
 - [x]  实现旋转gif的顺滑过渡
+- [x]  添加设置是否默认生成旋转gif
 ### 注意事项
 
 如果需要增加自定义的背景图，请保证图片满足以下要求，将背景图放入background文件夹中，并在.env文件中按要求添加BACKGROUND_PARAMS配置
@@ -79,7 +80,8 @@ nonebot-plugin-partner-join 是用于生成舞萌DX(maimaiDX)旅行伙伴加入�
 | 配置项 | 必填 | 默认值 | 说明 |
 |:-----:|:----:|:----:|:----:|
 | JOIN_COMMANDS | 否 | {"加入": ["join", "旅行伙伴加入"]} | 加入指令，可自定义添加别名 |
-| PARAMS | 否 | {"skip_gif": ["-s", "s", "stop"]} | 跳过生成旋转gif的参数 |
+| STATIC_IMAGE | 否 | True | False则默认生成旋转gif |
+| PARAMS | 否 | {"skip_gif": ["-s", "s", "stop"], "rotate_img": ["-r", "r", "rotate"]} | 当 static_image=True 时，使用 rotate_img 参数生成gif；当 static_image=False 时，使用 skip_gif 参数跳过gif |
 | SELF_PARAMS | 否 | {"self_join": ["自己", "me", "我"]} | 加入自己(头像图片)的指令 |
 | BACKGROUND_PARAMS | 否 | {"background.gif": ["default"], "your_background_name.gif": ["指令1", "指令2"]} | 自定义将图片加入其他背景框的参数指令 |
 | GIF_FPS | 否 | 30 | gif的fps |
