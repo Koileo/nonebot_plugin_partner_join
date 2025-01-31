@@ -106,7 +106,13 @@ async def _(
 
     for key in PARAMS.keys():
         state[key] = False
-
+        
+    # 根据 static_image 动态选择参数
+    if plugin_config.static_image:
+        target_param = "rotate_img"
+    else:
+        target_param = "skip_gif"
+    
     for key, aliases in PARAMS.items():
         for alias in aliases:
             if any(alias in str(segment) for segment in msg): 
@@ -186,8 +192,19 @@ async def handle_event(
     gif_path = Path(join_cache_DIR) / "placeholder.gif"
     gif_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 如果跳过GIF
-    if state.get("skip_gif", False):
+    if plugin_config.static_image:
+        # 当 static_image=True 时，rotate_img 参数控制是否生成 GIF
+        should_generate_gif = state.get("rotate_img", False)
+    else:
+        # 当 static_image=False 时，skip_gif 参数控制是否跳过 GIF
+        should_generate_gif = not state.get("skip_gif", False)
+
+    if should_generate_gif:
+        # 生成旋转 GIF
+        img = circle_crop(img)
+        gif_path = Path(create_rotating_gif(img))
+    else:
+        # 生成静态图
         if getattr(img, "is_animated", False):
             frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
             frames[0].save(gif_path, save_all=True, append_images=frames[1:], loop=0, duration=img.info.get("duration", 100))
@@ -195,9 +212,6 @@ async def handle_event(
             img = circle_crop(img)
             img.save(gif_path, format="GIF")
         state["skip_gif"] = False
-    else:
-        img = circle_crop(img)
-        gif_path = Path(create_rotating_gif(img))
 
     # 合成背景和GIF图像
     background_path = Path(__file__).parent / "background" / state["selected_background"]
