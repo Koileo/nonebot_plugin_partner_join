@@ -7,8 +7,12 @@ class Config(BaseModel):
     total_duration: int = 2
     max_turns: int = 4
     rotation_direction: int = -1
-
-    params: dict[str, list[str]] = {"skip_gif": ["-s", "s", "stop"]}
+    
+    static_image: bool = True
+    params: dict[str, list[str]] = {
+        "skip_gif": ["-s", "s", "stop"],
+        "rotate_img": ["-r", "r", "rotate"]
+    }
     self_params: dict[str, list[str]] = {"self_join": ["我", "自己"]}
     background_params: dict[str, list[str]] = {"background.gif": ["default"]}
     join_commands: dict[str, list[str]] = {"加入": ["旅行伙伴加入", "旋转"]}
@@ -31,5 +35,4 @@ class Config(BaseModel):
                 if msg_seg.type == "at"
             ),
             "寄",
-        )
-        
+        )        
