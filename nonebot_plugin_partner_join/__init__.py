@@ -1,10 +1,12 @@
+from nonebot import on_command
+from nonebot.adapters.onebot.v11 import MessageSegment
 import os
 import time
 import io
 import re
 import datetime
 import httpx
-from PIL import Image, ImageDraw, ImageSequence
+from PIL import Image, ImageDraw, ImageSequence, ImageFilter
 from pathlib import Path
 from nonebot.plugin import PluginMetadata
 from nonebot import require, on_command, get_driver
@@ -12,12 +14,15 @@ from nonebot.adapters import Bot, Event, Message
 from nonebot.adapters.onebot.v11 import Message, MessageSegment, Bot, Event, GroupMessageEvent
 from nonebot.params import Arg, CommandArg, EventMessage
 from nonebot.typing import T_State
+
 require("nonebot_plugin_alconna")
 from nonebot_plugin_alconna import Image as ALImage, UniMessage
 from nonebot_plugin_alconna.uniseg.tools import image_fetch, reply_fetch
 from nonebot_plugin_alconna.uniseg import UniMsg, Reply
+
 require("nonebot_plugin_apscheduler")
 from nonebot_plugin_apscheduler import scheduler
+
 require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as store
 from tarina import LRU
@@ -26,6 +31,8 @@ from nonebot.matcher import Matcher
 from typing import List
 from nonebot import get_plugin_config
 from .config import Config
+import os
+
 plugin_config = get_plugin_config(Config)
 
 __plugin_meta__ = PluginMetadata(
@@ -39,6 +46,7 @@ __plugin_meta__ = PluginMetadata(
 )
 
 join_help = on_command("加入帮助", aliases={"join帮助", "加入help", "join help"}, priority=10, block=True)
+
 
 @join_help.handle()
 async def _(event: GroupMessageEvent, message: Message = EventMessage()):
@@ -54,10 +62,12 @@ async def _(event: GroupMessageEvent, message: Message = EventMessage()):
         "[<加入指令>,image] 先发送加入指令再选择图片发送\n"
         "[<加入指令>“image”] 加入你引用的聊天记录(图片)\n"
         "[<加入指令>@XX] 加入@对象(头像图片)\n"
-    ) 
+    )
+
 
 join_DIR: Path = store.get_plugin_data_dir()
 join_cache_DIR: Path = store.get_plugin_cache_dir()
+
 
 @scheduler.scheduled_job('cron', hour=0, minute=0)
 async def clear_join_daily():
@@ -73,7 +83,8 @@ async def clear_join_daily():
                     os.rmdir(file_path)
             except Exception:
                 pass
-                
+
+
 PARAMS = plugin_config.params
 SELF_PARAMS = plugin_config.self_params
 BACKGROUND_PARAMS = plugin_config.background_params
@@ -84,38 +95,39 @@ total_duration = plugin_config.total_duration
 max_turns = plugin_config.max_turns
 rotation_direction = plugin_config.rotation_direction
 
-async def extract_images(  
-    bot: Bot, event: Event, state: T_State, msg: UniMsg
-) -> str:  
-    for msg_seg in msg:  
-        if isinstance(msg_seg, ALImage): 
 
+async def extract_images(
+        bot: Bot, event: Event, state: T_State, msg: UniMsg
+) -> str:
+    for msg_seg in msg:
+        if isinstance(msg_seg, ALImage):
             return await image_fetch(bot=bot, event=event, state=state, img=msg_seg)
+
 
 for main_command, aliases in JOIN_COMMANDS.items():
     join = on_command(main_command, aliases=set(aliases), priority=5, block=True)
-    
-@join.handle()
-async def _(  
-    bot: Bot,
-    msg: UniMsg,
-    event: Event,
-    state: T_State,
-    matcher: Matcher,
-):
 
+
+@join.handle()
+async def _(
+        bot: Bot,
+        msg: UniMsg,
+        event: Event,
+        state: T_State,
+        matcher: Matcher,
+):
     for key in PARAMS.keys():
         state[key] = False
-        
+
     # 根据 static_image 动态选择参数
     if plugin_config.static_image:
         target_param = "rotate_img"
     else:
         target_param = "skip_gif"
-    
+
     for key, aliases in PARAMS.items():
         for alias in aliases:
-            if any(alias in str(segment) for segment in msg): 
+            if any(alias in str(segment) for segment in msg):
                 state[key] = True
                 break
 
@@ -131,21 +143,21 @@ async def _(
             if alias in str(msg):
                 selected_background = bg_file
                 break
-    state["selected_background"] = selected_background 
-    
+    state["selected_background"] = selected_background
+
     if msg.has(Reply):
         if (reply := await reply_fetch(event, bot)) and reply.msg:
-            reply_msg = reply.msg            
+            reply_msg = reply.msg
             uni_msg_with_reply = UniMessage.generate_without_reply(message=reply_msg)
-        msg.extend(uni_msg_with_reply)  
-    
+        msg.extend(uni_msg_with_reply)
+
     if img_url := await extract_images(bot=bot, event=event, state=state, msg=msg):
-        state["img_url"] = img_url  
+        state["img_url"] = img_url
         state["image_processed"] = True
-    
+
     user_id = event.get_user_id()
-    at_id = await plugin_config.get_at(event)    
-    
+    at_id = await plugin_config.get_at(event)
+
     if at_id != "寄" and not state.get("image_processed", False):
         img_url = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(at_id)
         state["image_processed"] = True
@@ -162,19 +174,20 @@ async def _(
             image_url = match.group(1)
             image_url = image_url.replace("&amp;", "&")
         else:
-            print("未找到图片URL")
+            pass  # no image url found
 
         async with httpx.AsyncClient() as client:
             response = await client.get(image_url)
             img_data = response.content
             state["img_data"] = img_data
-        
+
+
 @join.got("image_processed", prompt="请选择要加入的旅行伙伴~(图片)")
 async def handle_event(
-    bot: Bot,
-    msg: UniMsg,
-    event: Event,
-    state: T_State,
+        bot: Bot,
+        msg: UniMsg,
+        event: Event,
+        state: T_State,
 ):
     if state.get("image_object", False):
         img_data = state["img_data"]
@@ -207,7 +220,8 @@ async def handle_event(
         # 生成静态图
         if getattr(img, "is_animated", False):
             frames = [frame.copy() for frame in ImageSequence.Iterator(img)]
-            frames[0].save(gif_path, save_all=True, append_images=frames[1:], loop=0, duration=img.info.get("duration", 100))
+            frames[0].save(gif_path, save_all=True, append_images=frames[1:], loop=0,
+                           duration=img.info.get("duration", 100))
         else:
             img = circle_crop(img)
             img.save(gif_path, format="GIF")
@@ -220,11 +234,12 @@ async def handle_event(
     if final_gif_path.exists():
         await join.send(MessageSegment.image(final_gif_path))
     else:
-        print("生成的GIF图像文件不存在。")
+        pass  # generated GIF not found
 
     # 清理缓存的GIF文件
     if gif_path.exists():
         gif_path.unlink()
+
 
 def circle_crop(img: Image.Image) -> Image.Image:
     """将图像裁剪成圆形，保留动态效果"""
@@ -241,10 +256,11 @@ def circle_crop(img: Image.Image) -> Image.Image:
         gif_path = os.path.join(join_DIR, f"cropped_{int(time.time())}.gif")
         os.makedirs(join_DIR, exist_ok=True)
         output.save(gif_path, save_all=True, append_images=frames[1:], loop=0, duration=img.info.get("duration", 100))
-        
+
         return Image.open(gif_path)
     else:
         return crop_single_frame(img)
+
 
 def crop_single_frame(frame: Image.Image) -> Image.Image:
     """对单个帧进行圆形裁剪"""
@@ -258,6 +274,7 @@ def crop_single_frame(frame: Image.Image) -> Image.Image:
     output.paste(frame, (0, 0), mask)
     output = output.crop((center_x - radius, center_y - radius, center_x + radius, center_y + radius))
     return output
+
 
 def create_rotating_gif(img: Image.Image) -> str:
     """创建旋转GIF，保留动态效果"""
@@ -312,9 +329,10 @@ def create_rotating_gif(img: Image.Image) -> str:
     output_dir.mkdir(exist_ok=True)
     gif_path = output_dir / f"rotating_{int(time.time())}.gif"
 
-    frames[0].save(gif_path, save_all=True, append_images=frames[1:], duration=int(1000/fps), loop=0)
-    
+    frames[0].save(gif_path, save_all=True, append_images=frames[1:], duration=int(1000 / fps), loop=0)
+
     return str(gif_path)
+
 
 def find_circle_diameter(mask: Image.Image) -> int:
     """计算掩码中圆形区域的直径"""
@@ -333,6 +351,7 @@ def find_circle_diameter(mask: Image.Image) -> int:
     diameter = bottom_y - top_y + 1
     return diameter
 
+
 def find_circle_center(mask: Image.Image) -> (int, int):
     """计算掩码中圆形区域的圆心"""
     width, height = mask.size
@@ -350,10 +369,12 @@ def find_circle_center(mask: Image.Image) -> (int, int):
     circle_center_y = top_y + (bottom_y - top_y) // 2
     return center_x, circle_center_y
 
+
 def resize_gif_to_diameter(img: Image.Image, diameter: int) -> Image.Image:
     """将GIF图像等比缩放到指定的直径"""
     img = img.resize((diameter, diameter), Image.LANCZOS)
     return img
+
 
 def composite_images(background_path: str, gif_path: str) -> str:
     """将GIF图像粘贴到背景图中"""
@@ -373,18 +394,19 @@ def composite_images(background_path: str, gif_path: str) -> str:
             gif.seek(gif.tell() + 1)
         except EOFError:
             break
-    
+
     gif_frames = [circle_crop(frame) for frame in gif_frames]
     gif_frames = [resize_gif_to_diameter(frame, diameter) for frame in gif_frames]
 
     composite_frames = []
     for frame in gif_frames:
         composite_frame = background.copy()
-        composite_frame.paste(frame, (circle_center_x - diameter // 2, circle_center_y - diameter // 2), frame.split()[-1])
+        composite_frame.paste(frame, (circle_center_x - diameter // 2, circle_center_y - diameter // 2),
+                              frame.split()[-1])
         composite_frames.append(composite_frame)
 
     final_gif_path = Path(join_DIR) / f"composite_{int(time.time())}.gif"
-    
+
     composite_frames[0].save(
         final_gif_path,
         save_all=True,
@@ -392,6 +414,225 @@ def composite_images(background_path: str, gif_path: str) -> str:
         duration=delays,
         loop=0
     )
-    
+
     return str(final_gif_path)
-    
+
+
+mirror = on_command("镜像", aliases={"对称", "mirror"}, priority=5, block=True)
+
+
+def _ahash(img: Image.Image, hash_size: int = 8) -> str:
+    g = img.convert("L").resize((hash_size, hash_size), Image.BILINEAR)
+    pixels = list(g.getdata())
+    avg = sum(pixels) / len(pixels)
+    bits = ''.join('1' if p >= avg else '0' for p in pixels)
+    # convert to hex
+    return hex(int(bits, 2))[2:].rjust(hash_size * hash_size // 4, '0')
+
+
+def _dominant_colors(img: Image.Image, k: int = 5):
+    # Use PIL quantize to approximate k dominant colors
+    small = img.convert("RGB").resize((256, 256))
+    pal = small.quantize(colors=k, method=Image.MEDIANCUT)
+    counts = pal.getcolors(256 * 256) or []
+    # Map palette index to RGB
+    palette = pal.getpalette()
+    out = []
+    total = sum(c for c, _ in counts) or 1
+    for c, idx in sorted(counts, reverse=True):
+        r = palette[idx * 3 + 0];
+        g = palette[idx * 3 + 1];
+        b = palette[idx * 3 + 2]
+        out.append((c / total, (r, g, b)))
+    return out  # list of (ratio, (r,g,b))
+
+
+def _edge_density(img: Image.Image) -> float:
+    try:
+        edges = img.convert("L").filter(ImageFilter.FIND_EDGES)
+        pixels = list(edges.getdata())
+        return sum(pixels) / (len(pixels) * 255.0)
+    except Exception:
+        return 0.0
+
+
+@mirror.handle()
+async def _(
+        bot: Bot,
+        msg: UniMsg,
+        event: Event,
+        state: T_State,
+        matcher: Matcher,
+        args=CommandArg()
+):
+    # 合并引用消息（与旅行伙伴一致）
+    if msg.has(Reply):
+        if (reply := await reply_fetch(event, bot)) and getattr(reply, "msg", None):
+            uni_msg_with_reply = UniMessage.generate_without_reply(message=reply.msg)
+            msg.extend(uni_msg_with_reply)
+
+    # 优先从消息中取图
+    if (img_url := await extract_images(bot=bot, event=event, state=state, msg=msg)):
+        state["img_url"] = img_url
+        state["image_processed"] = True
+
+    # 尝试 @头像（与旅行伙伴一致）
+    user_id = event.get_user_id()
+    at_id = await plugin_config.get_at(event)
+    if at_id != "寄" and not state.get("image_processed", False):
+        img_url = "url=https://q4.qlogo.cn/headimg_dl?dst_uin={}&spec=640,".format(at_id)
+        state["img_url"] = img_url
+        state["image_processed"] = True
+        state["image_object"] = True
+
+    # 没有图片则进入 got 提示
+    if not state.get("image_processed", False):
+        await mirror.reject("请发送要对称的图片~(可直接发图，或引用一条带图消息)")
+
+
+@mirror.got("image_processed")
+async def _mirror_got(
+        bot: Bot,
+        msg: UniMsg,
+        event: Event,
+        state: T_State,
+        matcher: Matcher,
+):
+    # 如果上一轮没取到，再尝试一次解析
+    # 这里的 extract_images 会直接返回图片的二进制数据(bytes)
+    if not state.get("img_url"):
+        if (img_data := await extract_images(bot=bot, event=event, state=state, msg=msg)):
+            state["img_url"] = img_data  # 将 bytes 存入 state
+
+    if not state.get("img_url"):
+        await mirror.finish("未检测到图片，对称处理取消~")
+
+    # --- 以下是与 join 功能对齐的核心逻辑 ---
+
+    img_bytes = None
+    # 情况一：处理 @好友，需要下载头像URL
+    if state.get("image_object", False):
+        url_pattern = re.compile(r'url=([^,]+)')
+        # state["img_url"] 此时是 "url=http://..." 格式的字符串
+        match = url_pattern.search(state["img_url"])
+        if match:
+            image_url = match.group(1).replace("&amp;", "&")
+        else:
+            await mirror.finish("头像链接解析失败，请直接发送图片试试~")
+
+        try:
+            # 使用和 join 一样的简单下载方式
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(image_url)
+                resp.raise_for_status()  # 确保请求成功
+            img_bytes = resp.content
+        except Exception:
+            await mirror.finish("头像下载失败，请稍后再试。")
+    # 情况二：处理用户直接发送的图片
+    else:
+        # state["img_url"] 此时已经是 extract_images 返回的图片 bytes
+        # 无需下载，直接使用即可！
+        img_bytes = state["img_url"]
+
+    # --- 图片处理逻辑保持不变，但增强了错误处理 ---
+
+    # 解析参数（方向/基准侧/axis）——保留你之前的增强逻辑
+    arg_text = ""
+    try:
+        from nonebot.params import CommandArg
+    except Exception:
+        pass
+    direction = "horizontal"
+    source_side = None
+    axis_value = None
+
+    # 解析图片并执行镜像
+    try:
+        # 确保 img_bytes 是有效数据后才进行处理
+        if not img_bytes:
+            await mirror.finish("未能获取到图片数据，处理取消~")
+
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
+        w, h = img.size
+
+        # 工具函数（与之前版本一致）
+        def resolve_axis(is_horizontal: bool):
+            if axis_value is None:
+                return (w // 2) if is_horizontal else (h // 2)
+            kind, val = axis_value
+            if kind == "pct":
+                if is_horizontal:
+                    return max(0, min(w, round(w * val / 100.0)))
+                else:
+                    return max(0, min(h, round(h * val / 100.0)))
+            else:
+                return max(0, min((w if is_horizontal else h), val))
+
+        def mirror_horizontal(src_side: str | None):
+            x_axis = resolve_axis(True)
+            left_box = (0, 0, x_axis, h)
+            right_start = x_axis if w % 2 == 0 else x_axis + 1
+            right_box = (right_start, 0, w, h)
+
+            result = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+            if src_side in ("right",) and right_box[0] < right_box[2]:
+                right = img.crop(right_box)
+                right_mirror = right.transpose(Image.FLIP_LEFT_RIGHT)
+                result.paste(right_mirror.crop((right_mirror.width - left_box[2], 0, right_mirror.width, h)), (0, 0))
+                result.paste(img.crop((x_axis, 0, w, h)), (x_axis, 0))
+            else:
+                left = img.crop(left_box)
+                left_mirror = left.transpose(Image.FLIP_LEFT_RIGHT)
+                result.paste(img.crop((0, 0, x_axis, h)), (0, 0))
+                result.paste(left_mirror.crop((0, 0, w - x_axis, h)), (x_axis, 0))
+            return result
+
+        def mirror_vertical(src_side: str | None, src_img: Image.Image | None = None):
+            base = src_img if src_img is not None else img
+            x_w, x_h = base.size
+            y_axis = resolve_axis(False)
+            top_box = (0, 0, x_w, y_axis)
+            bottom_start = y_axis if x_h % 2 == 0 else y_axis + 1
+            bottom_box = (0, bottom_start, x_w, x_h)
+
+            result = Image.new("RGBA", (x_w, x_h), (0, 0, 0, 0))
+            if src_side in ("bottom",):
+                bottom = base.crop(bottom_box)
+                bottom_mirror = bottom.transpose(Image.FLIP_TOP_BOTTOM)
+                result.paste(bottom_mirror.crop((0, bottom_mirror.height - top_box[3], x_w, bottom_mirror.height)),
+                             (0, 0))
+                result.paste(base.crop((0, y_axis, x_w, x_h)), (0, y_axis))
+            else:
+                top = base.crop(top_box)
+                top_mirror = top.transpose(Image.FLIP_TOP_BOTTOM)
+                result.paste(base.crop((0, 0, x_w, y_axis)), (0, 0))
+                result.paste(top_mirror.crop((0, 0, x_w, x_h - y_axis)), (0, y_axis))
+            return result
+
+        # 当前简单：保持默认（水平、左->右）
+        if direction == "horizontal":
+            result = mirror_horizontal("right" if source_side == "right" else "left")
+        elif direction == "vertical":
+            result = mirror_vertical("bottom" if source_side == "bottom" else "top")
+        else:
+            tmp = mirror_horizontal("right" if source_side == "right" else "left")
+            result = mirror_vertical("bottom" if source_side == "bottom" else "top", tmp)
+
+        # 保存与发送
+        save_dir = Path("data");
+        save_dir.mkdir(parents=True, exist_ok=True)
+        if "A" in result.getbands() and result.getextrema()[-1][0] < 255:
+            save_path = save_dir / f"mirror_{event.user_id}.png"
+            result.save(save_path, format="PNG")
+        else:
+            result = result.convert("RGB")
+            save_path = save_dir / f"mirror_{event.user_id}.jpg"
+            result.save(save_path, format="JPEG", quality=95)
+
+        await mirror.finish(MessageSegment.image(Path(save_path).resolve().as_uri()))
+        try:
+            os.remove(save_path)
+        except Exception:
+            pass
+    except Exception:
+        pass

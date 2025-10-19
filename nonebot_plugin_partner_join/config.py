@@ -7,7 +7,6 @@ class Config(BaseModel):
     total_duration: int = 2
     max_turns: int = 4
     rotation_direction: int = -1
-    
     static_image: bool = True
     params: dict[str, list[str]] = {
         "skip_gif": ["-s", "s", "stop"],
